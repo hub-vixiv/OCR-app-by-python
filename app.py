@@ -12,12 +12,17 @@ from unidecode import unidecode
 def get_reader():
     return easyocr.Reader(['ja', 'en'])
 
-# テキスト正規化関数（不要な記号除去・大文字小文字正規化・仮名正規化も可）
+# テキスト正規化関数（修正版）
 def normalize_text(text):
     text = unicodedata.normalize('NFKC', text)
-    text = unidecode(text)        # 英数字は半角化
+    # unidecodeは日本語を削除してしまうので、英数字のみに適用
+    # または、日本語を保持したい場合は使用しない
+    # text = unidecode(text)  # この行をコメントアウト
     text = text.lower()
-    text = re.sub(r'[^\\wぁ-んァ-ン一-龥]', '', text)  # 日本語・英字以外除去
+    # 日本語（ひらがな、カタカナ、漢字）、英数字、アンダースコアのみを残す
+    text = re.sub(r'[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]', '', text)
+    # 空白文字も除去
+    text = re.sub(r'\s+', '', text)
     return text
 
 # OCR実行
@@ -42,29 +47,35 @@ img2 = st.file_uploader('画像2をアップロード', type=['png', 'jpg', 'jpe
 if img1 and img2:
     image1 = Image.open(img1)
     image2 = Image.open(img2)
+    
     st.image([image1, image2], caption=['画像1', '画像2'], width=200)
-
+    
     text1 = ocr_image_easyocr(image1)
     text2 = ocr_image_easyocr(image2)
-
+    
     norm1 = normalize_text(text1)
     norm2 = normalize_text(text2)
-
+    
     similarity = calc_similarity(norm1, norm2)
-
+    
     st.subheader('OCR抽出結果')
     st.write('画像1:', text1)
     st.write('画像2:', text2)
+    
     st.write('---')
     st.subheader('正規化後テキスト')
     st.write('画像1:', norm1)
     st.write('画像2:', norm2)
+    
     st.write('---')
     st.subheader('類似度スコア')
     st.write(f'{similarity:.2f}')
-
+    
     if similarity == 1.0:
-        st.success('一致しました！')
+        st.success('完全一致しました！')
+    elif similarity >= 0.8:
+        st.info('高い類似度です。')
+    elif similarity >= 0.5:
+        st.warning('中程度の類似度です。')
     else:
-        st.warning('一致しませんでした。')
-
+        st.error('類似度が低いです。')
