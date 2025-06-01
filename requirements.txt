@@ -1,5 +1,5 @@
 streamlit
-pillow
-pytesseract
-python-Levenshtein
-unicodedata2
+Pillow
+easyocr
+Levenshtein
+Unidecode
